@@ -1,0 +1,201 @@
+# Oracle Task Perinstallation 
+- include_vars: oracle-database.yml
+
+- name: set up the oracle hostnames
+  lineinfile:
+    dest: /etc/hosts
+    state: present
+    line: "{{ databases.node1.internal_ip }} {{ databases.node1.hostname }}"
+  #with_items:
+  #  - "{{ oracle_hostname }}"
+
+- name: change kernel parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+  with_dict: "{{ oracle_database_kernel_params }}"
+
+- name: save and reload sysctl config
+  command: sysctl -p
+  ignore_errors: yes # because apparently the default centos config is invalid!
+
+- name: oracle-recommended security limits
+  lineinfile:
+    dest: /etc/security/limits.conf
+    state: present
+    line: "{{ item }}"
+  with_items:
+    - "grid       soft    nproc   {{grid_limits_soft_nproc}}"
+    - "grid       hard    nproc   {{grid_limits_hard_nproc}}"
+    - "grid       soft    nofile  {{grid_limits_soft_no_file}}"
+    - "grid       hard    nofile  {{grid_limits_hard_no_file}}"
+    - "grid       soft    stack   {{grid_limits_soft_stack}}"
+    - "grid       hard    stack   {{grid_limits_hard_stack}}"
+    - "oracle     soft    nproc   {{oracle_limits_soft_nproc}}"
+    - "oracle     hard    nproc   {{oracle_limits_hard_nproc}}"
+    - "oracle     soft    nofile  {{oracle_limits_soft_no_file}}"
+    - "oracle     hard    nofile  {{oracle_limits_hard_no_file}}"
+    - "oracle     soft    stack   {{oracle_limits_soft_stack}}"
+    - "oracle     hard    stack   {{oracle_limits_hard_stack}}"
+    - "oracle     soft    core    {{oracle_limits_soft_core}}"
+    - "oracle     hard    core    {{oracle_limits_soft_core}}"
+    - "oracle     soft    memlock {{oracle_limits_soft_memlock}}"
+    - "oracle     hard    memlock {{oracle_limits_hard_memlock}}"
+
+
+# it's in the oracle recommendations.
+- name: oracle-recommended PAM config
+  lineinfile:
+    dest: /etc/pam.d/login
+    state: present
+    line: "session required pam_limits.so"
+
+
+- name: disable setenforce # because oracle says so, that's why
+  command: /usr/sbin/setenforce 0
+  ignore_errors: true
+
+- name: --- Creat Groups and Uers --- 
+  shell: |
+    groupadd -g 501 oinstall
+    groupadd -g 502 dba
+    groupadd -g 503 oper
+    groupadd -g 504 asmadmin
+    groupadd -g 505 asmdba
+    groupadd -g 506 asmoper
+    useradd -u 5000 -g oinstall -G dba,oper,asmdba oracle
+    useradd -u 5001 -g oinstall -G dba,asmadmin,asmoper,asmdba grid
+  ignore_errors: true
+
+- name: --- Change oracle user password ---
+  shell: |
+    echo  "{{ databases.node1.passwd_usr_oracle }}" | passwd --stdin oracle
+
+- name: --- Change grid user password ---
+  shell: |
+    echo  "{{ databases.node1.passwd_usr_grid }}" | passwd --stdin grid
+
+- name: --- set .bash_profile grid user ---
+  lineinfile: dest=/home/grid/.bash_profile state=present line="{{ item }}"
+  with_items:
+    - "export ORACLE_SID=+ASM"
+    - "export JAVA_HOME=/usr/java/jdk1.8.0_161"
+    - "export ORACLE_BASE=/gridbase"
+    - "export ORACLE_HOME=/grid/product/12.2.0/grid"
+    #export ORACLE_PATH=/oracle/common/oracle/sql
+    - "export ORACLE_TERM=xterm"
+    #export NLS_DATE_FORMAT=”DD-MON-YYYY HH24:MI:SS”
+    #export TNS_ADMIN=$ORACLE_HOME/network/admin
+    - "export ORA_NLS11=$ORACLE_HOME/nls/data"
+    - "PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin"
+    - "PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin"
+    - "export PATH"
+    - "LD_LIBRARY_PATH=$ORACLE_HOME/lib"
+    - "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib"
+    - "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib"
+    - "export LD_LIBRARY_PATH"
+    - "CLASSPATH=$ORACLE_HOME/JRE"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib"
+    - "export CLASSPATH"
+    - "export THREADS_FLAG=native"
+    - "export TEMP=/tmp"
+    - "export TMPDIR=/tmp"
+    - "umask 022"
+
+- name:  --- reload .bash_profile for grid user --- 
+  shell: source /home/grid/.bash_profile
+
+- name: -- set .bash_profile oracle user environment --
+  lineinfile: dest=/home/oracle/.bash_profile state=present line="{{ item }}"
+  with_items:
+    - "export ORACLE_SID=orclasm"
+    - "export ORACLE_UNQNAME=orcl"
+    - "export JAVA_HOME=/usr/java/jdk1.8.0_161"
+    - "export ORACLE_BASE=/oracle"
+    - "export ORACLE_HOME=$ORACLE_BASE/product/12.2.0/db_1"
+    #export ORACLE_PATH=/app/common/oracle/sql
+    #export SQLPATH=/app/common/oracle/sql
+    - "export ORACLE_TERM=xterm"
+    #export NLS_DATE_FORMAT=”DD-MON-YYYY HH24:MI:SS”
+    #export TNS_ADMIN=$ORACLE_HOME/network/admin
+    - "export ORA_NLS11=$ORACLE_HOME/nls/data"
+    - "PATH=.:${JAVA_HOME}/bin:${PATH}:$HOME/bin:$ORACLE_HOME/bin"
+    - "PATH=${PATH}:/usr/bin:/bin:/usr/bin/X11:/usr/local/bin"
+    #PATH=${PATH}:/app/common/oracle/bin
+    - "export PATH"
+    - "LD_LIBRARY_PATH=$ORACLE_HOME/lib"
+    - "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:$ORACLE_HOME/oracm/lib"
+    - "LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/lib:/usr/lib:/usr/local/lib"
+    - "export LD_LIBRARY_PATH"
+    - "CLASSPATH=$ORACLE_HOME/JRE"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/jlib"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/rdbms/jlib"
+    - "CLASSPATH=${CLASSPATH}:$ORACLE_HOME/network/jlib"
+    - "export CLASSPATH"
+    - "export THREADS_FLAG=native"
+    - "export TEMP=/tmp"
+    - "export TMPDIR=/tmp"
+    - "umask 022"
+
+
+- name:  --- reload .bash_profile for oracle user --- 
+  shell: source /home/oracle/.bash_profile
+
+- name: --- Create Directory oracle_home ---
+  shell: |
+    mkdir -p /oraInventory
+    mkdir -p /gridbase
+    mkdir -p /oracle
+    mkdir -p /grid
+    mkdir -p /grid/product/12.2.0/grid
+    mkdir -p /oracle/product/12.2.0/db_1
+    chown -R grid:oinstall    /oraInventory
+    chown -R grid:oinstall    /gridbase
+    chown -R grid:oinstall    /grid
+    chown -R oracle:oinstall  /oracle
+    chmod -R 775 /grid
+    chmod -R 775 /oracle
+
+- name: --- mkdir software and move database and gird to software directory ---
+  shell: |
+     unzip /root/linuxx64_12201_database.zip -d /oracle/product/12.2.0/db_1
+     unzip /root/linuxx64_12201_grid_home.zip -d /grid/product/12.2.0/grid
+     chown -R oracle:oinstall /oracle
+     chown -R grid:oinstall /grid
+     chmod -R 775 /grid
+     chmod -R 775 /oracle
+
+- name: ------ Mv db-install.rsp and network-config -----
+  template: src={{item.src}} dest={{item.dest}}
+  with_items:
+    - { src: 'db-install.rsp.j2', dest: '/tmp/db-install.rsp'}
+    - { src: 'ifcfg-bond0.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-bond0'}
+    - { src: 'ifcfg-bond1.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-bond1'}
+    - { src: 'ifcfg-eno1.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-eno1'}
+    - { src: 'ifcfg-eno2.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-eno2'}
+    - { src: 'ifcfg-eno3.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-eno3'}
+    - { src: 'ifcfg-eno4.j2', dest: '/etc/sysconfig/network-scripts/ifcfg-eno4'}
+    
+- name: -- get list-disk ---
+  shell: |
+   lsblk  | grep ^sd.*$ | awk {'print $1'} | grep -v sda
+  register: listdisk
+
+- name: -- Partitions Disk (Parted) ----
+  shell: |
+    parted /dev/{{ item }} mklabel gpt mkpart primary "1 -1" -s
+  with_items: 
+    - "{{listdisk.stdout_lines}}"
+  ignore_errors: true
+    
+# - name: --- mount disk to /grid and /oracle ---
+#   shell: |
+#     mkfs.ext4  /dev/sdb1
+#     mkfs.ext4  /dev/sdc1
+#     mount /dev/sdb1 /grid
+#     mount /dev/sdc1 /oracle
+
+- include_tasks: oracleasm-config.yml

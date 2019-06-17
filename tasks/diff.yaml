@@ -1,0 +1,163 @@
+
+#- name: --- Upload Database 12.c to server oracle ---
+#  copy: src=linuxx64_12201_database.zip dest=/home/oracle/linuxx64_12201_database.zip
+#  ignore_errors: true
+# - name: -- mv linuxx64_12201_grid_home.zip and /root/linuxx64_12201_database.zip to /home/oracle --
+#   shell: |
+#     mv /root/linuxx64_12201_grid_home.zip /home/grid
+#     mv /root/linuxx64_12201_database.zip /home/oracle
+
+# - name: --- Unzip  linuxx64_12201_database.zip ---  
+#   shell: |
+#     cd /home/oracle/
+#     chown -R oracle:oinstall /home/oracle/database
+
+#- name: --- --- Upload Grid 12.c to server oracle ---
+#  copy: src=linuxx64_12201_grid_home.zip  dest=/home/oracle/linuxx64_12201_grid_home.zip
+#  ignore_errors: true
+
+# - name: --- Unzip  linuxx64_12201_grid_home.zip ---  
+#   shell: |
+#     cd /home/grid
+#     mkdir -p /home/grid/grid
+#     chown grid:oinstall linuxx64_12201_grid_home.zip
+#     unzip linuxx64_12201_grid_home.zip -d /home/grid/grid
+#     cd /home/grid
+#     chown -R grid:oinstall /home/grid/grid
+
+mkdir -p /software
+     cd /software
+     chmod 775 -R /software
+     mv /root/linuxx64_12201_grid_home.zip /software
+     mv /root/linuxx64_12201_database.zip /software
+
+ansible_memory_mb.real.total
+ansible_mounts.block_size
+ansible_mounts.
+  
+oracle_user: oracle
+oracle_install_group: oinstall
+oracle_extra_groups: []
+ oracle_os_group: oinstall
+ oracle_os_dba_group: dba
+
+
+   
+  node2: 
+    ORACLE_UNQNAME: orcl1
+    ORACLE_SID:  cdb1
+    ORACLE_BASE: /u01/app/oracle
+    ORACLE_HOME: /u01/app/oracle/product/12.2.0.1/db_1
+    ssh_ip: 172.16.4.194
+    internal_ip: 172.16.4.194
+    port: 1521
+    SERVICE_NAME: orcl
+
+  node3:
+    ORACLE_UNQNAME: orcl1
+    ORACLE_SID:  cdb1
+    ORACLE_BASE: /u01/app/oracle
+    ORACLE_HOME: /u01/app/oracle/product/12.2.0.1/db_1
+    ssh_ip: 172.16.4.194
+    internal_ip: 172.16.4.194
+    port: 1521
+    SERVICE_NAME: orcl 
+
+- name: oracle-recommended sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    ignoreerrors: yes # Ignore errors about unknown keys
+  with_items:
+    - { name: "kernel.shmall", value: "{{kernel.shmall}}" }
+    - { name: "kernel.shmmax", value: "{{kernel.shmmax}}" }
+    - { name: "kernel.shmmni", value: "{{kernel.shmmni}}" }
+    - { name: "kernel.sem", value: "{{kernel.sem.param1}} {{kernel.sem.param2}} {{kernel.sem.param3}} {{kernel.sem.param4}}"}
+    - { name: "fs.file-max", value: "{{fs.file-max}}" }
+    - { name: "fs.aio-max-nr", value: "{{fs.aio-max-nr}}" }
+    - { name: "net.ipv4.ip_local_port_range", value: "{{net.ipv4.ip_local_port_range.param1}} {{net.ipv4.ip_local_port_range.param2}}" }
+    - { name: "net.core.rmem_default", value: "{{net.core.rmem_default}}" }
+    - { name: "net.core.rmem_max", value: "{{net.core.rmem_max}}" }
+    - { name: "net.core.wmem_default", value: "{{net.core.wmem_default}}" }
+    - { name: "net.core.wmem_max", value: "{{net.core.wmem_max}}" }
+
+- name: oracle-recommended security limits
+  lineinfile:
+    dest: /etc/security/limits.conf
+    state: present
+    line: "{{ item }}"
+  with_items:
+    - "grid       soft    nproc   {{grid_limits_soft_nproc}}"
+    - "grid       hard    nproc   {{grid_limits_hard_nproc}}"
+    - "grid       soft    nofile  {{grid_limits_soft_nofile}}"
+    - "grid       hard    nofile  {{grid_limits_hard_nofile}}"
+    - "grid       soft    stack   {{grid_limits_soft_stack}}"
+    - "grid       hard    stack   {{grid_limits_hard_stack}}"
+    - "oracle     soft    nproc   {{oracle_limits_soft_nproc}}"
+    - "oracle     hard    nproc   {{oracle_limits_hard_nproc}}"
+    - "oracle     soft    nofile  {{oracle_limits_soft_no_file}}"
+    - "oracle     hard    nofile  {{oracle_limits_hard_no_file}}"
+    - "oracle     soft    stack   {{oracle_limits_soft_stack}}"
+    - "oracle     hard    stack   {{oracle_limits_hard_stack}}"
+    - "oracle     soft    core    {{oracle_limits_soft_core}}"
+    - "oracle     hard    core    {{oracle_limits_soft_core}}"
+    - "oracle     soft    memlock {{oracle_limits_soft_memlock}}"
+    - "oracle     hard    memlock {{oracle_limits_hard_memlock}}"
+
+
+- name: --- Creat Groups and Uers --- 
+  shell: |
+     groupadd -g 54321 oinstall
+     groupadd -g 54322 dba
+     groupadd -g 54323 oper
+     groupadd -g 54324 backupdba
+     groupadd -g 54325 dgdba
+     groupadd -g 54326 kmdba
+     groupadd -g 54327 asmdba
+     groupadd -g 54328 asmoper
+     groupadd -g 54329 asmadmin
+     groupadd -g 54330 racdba
+     useradd -u 54321 -g oinstall -G dba,oper oracle
+  ignore_errors: true
+
+- name: --- set Bash_profile (oracle user) ---
+  blockinfile:
+    path: /home/oracle/.bash_profile
+    marker: "#-----------------"
+    insertafter: '### AFTER THIS LINE PART 2'
+    state: present
+    block: |
+      export TMP=/tmp
+      export TMPDIR=$TMP
+      export ORACLE_HOSTNAME={{ backend_nodes.Databases.oracle_primary.HOSTNAME }}
+      export ORACLE_UNQNAME={{ backend_nodes.Databases.oracle_primary.ORACLE_UNQNAME }}
+      export ORACLE_BASE={{ backend_nodes.Databases.oracle_primary.ORACLE_BASE  }}
+      export ORACLE_HOME={{ backend_nodes.Databases.oracle_primary.ORACLE_HOME }}
+      export ORACLE_SID={{ backend_nodes.Databases.oracle_primary.ORACLE_SID }}
+      export PATH=/usr/sbin:/usr/local/bin:$PATH
+      export PATH=$ORACLE_HOME/bin:$PATH
+      export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+      export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+
+ll /dev/sd* | grep sd.*1$ | awk {'print $10'} | awk -F "/" {'print $3'} | tail -n 3
+
+
+
+- name: -- Create pv ----
+  shell: |
+    pvcreate /dev/sdb1
+
+- name: --- add pv to vg ---
+  shell: |
+    vgextend {{ vg_name }} /dev/sdb1 
+  ignore_errors: true
+    
+- name: -- Create lv ----
+  shell: |
+    lvcreate -L {{ lv_name }} -n {{ lv_name }} {{ vg_name }} 
+
+- name: -- Create lv (logical volume) --
+  shell: |
+    lvcreate 
+

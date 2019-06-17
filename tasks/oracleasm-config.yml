@@ -1,0 +1,44 @@
+---
+
+- name: --- Upload oracleasm-configouration ---
+  copy: src={{item.src}} dest={{item.dest}}
+  with_items:
+    - { src: 'oracleasm-configuration.sh', dest: '/root'}
+#    - { src: 'asmcommand.sh', dest: '/home/oracle/'}
+
+- name: --- chmod bash script ---
+  shell: |
+    cd /root
+    chmod +x oracleasm-configuration.sh
+    
+
+- name: -- run oracleasm-configuration.sh (oracleasm configure -i) --
+  shell: |
+    /root/oracleasm-configuration.sh
+# ignore_errors: true  
+
+
+- name: --- Create disk oracleASM ----
+  shell: |
+    oracleasm createdisk {{ list_partitions.desired_name.DATA.name1 }} {{ list_partitions.DISKS.DATA.DISK1 }}
+    oracleasm createdisk {{ list_partitions.desired_name.FRA.name1 }} {{ list_partitions.DISKS.FRA.DISK1 }}
+# you can add this item if you are another disk. also add variable to vars/oracle-database.yml, list-partition  
+# DATA DISK
+# FRA DISK
+# - name: --- chown disks ASM to grid --- 
+#   shell: |
+#     chown -R grid:asmadmin /dev/oracleasm/disks
+
+- name: -- run oracleasm-configuration.sh (oracleasm configure -i) --
+  shell: |
+    /root/oracleasm-configuration.sh
+# ignore_errors: true  
+
+# - name: --- load the kernel modual oracleasm ---
+#   shell: |
+#     /etc/init.d/oracleasm init
+#   ignore_errors: true  
+
+- name: --- rm all file in tmp --
+  shell : |
+    rm -fr /tmp/*

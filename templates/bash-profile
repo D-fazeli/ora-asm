@@ -1,0 +1,15 @@
+export TMP=/tmp
+export TMPDIR=$TMP
+
+export ORACLE_HOSTNAME= {{ oracle_node.hostname }}
+export ORACLE_UNQNAME= {{ oracle_node.ORACLE_UNQNAME }}
+export ORACLE_BASE= {{ oracle_node.ORACLE_BASE  }}
+export ORACLE_HOME= {{ oracle_node.ORACLE_HOME }}
+export ORACLE_SID= {{ oracle_node.ORACLE_SID }}
+
+export PATH=/usr/sbin:/usr/local/bin:$PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+export JAVA_HOME=/usr/java/jdk1.8.0_161

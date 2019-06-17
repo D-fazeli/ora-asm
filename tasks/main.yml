@@ -1,0 +1,66 @@
+---
+# tasks file for roles/general-config
+
+- name: --- mv old Reposity ---
+  shell: |
+   mv /etc/yum.repos.d/* ../
+  ignore_errors: yes 
+
+- name: --- Create new_reposity ---  
+  template: src=repo.j2 dest=/etc/yum.repos.d/backend.repo
+
+- name: --- clean yum ----  
+  shell: yum clean all
+
+- include_vars: oracle-database.yml
+
+- name: --- Disable selinux ---
+  selinux: 
+     policy: targeted
+     state: permissive
+
+- name: -- install Package for minimal ---
+  yum: name={{ item }} state=present
+  with_items: "{{ oracle_packages_list_minimal }}"
+  when: "{{ os_type.minimal }}" 
+
+- name: -- install Package for Desktop---
+  yum: name={{ item }} state=present
+  with_items: "{{ oracle_packages_list_desktop }}"
+  when: "{{ os_type.desktop }}"
+
+- include_tasks: java.yml
+
+- name: --- copy shell ---
+  copy: src=get-vars.sh dest=/root/get-vars.sh
+
+- name: --- chmod get-all-vars ---
+  shell: |
+   cd /root
+   chmod +x get-vars.sh
+   ./get-vars.sh
+  register: result
+
+- name: --- install expect tools ---
+  yum:
+   name: expect
+   state: present
+  ignore_errors: true
+    
+
+- set_fact:
+     ram: "{{ result.stdout_lines[0] }}"
+     shmmax: "{{ result.stdout_lines[1] }}"
+     page_size: "{{ result.stdout_lines[2] }}"
+     shmall: "{{result.stdout_lines[3]}}"
+
+- include_tasks: preparing.yml
+  become: yes
+  become_user: root
+
+- include_tasks: install-oracle.yml
+  become: yes
+  become_user: oracle
+
+  
+

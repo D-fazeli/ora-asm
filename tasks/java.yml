@@ -1,0 +1,12 @@
+---
+
+
+- name: --- install java Rpm ----
+  yum:
+    name: java
+    state: present
+
+- name: --- Set Java Home ----
+  shell: |
+   echo 'export JAVA_HOME=/usr/java/jdk1.8.0_161' | tee -a /etc/profile
+   source /etc/profile

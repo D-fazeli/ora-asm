@@ -1,0 +1,25 @@
+---
+- name: run installer
+  shell: "/home/oracle /runInstaller -silent -showProgress -waitforcompletion -ignoreSysPrereqs -responseFile /home/oracle/db-install.rsp"
+  args:
+    creates: "{{ databases.node1.oracle_home }}/bin/sqlplus"
+  become: yes
+  become_user: oracle
+  register: command_result
+  failed_when: "'Successfully Setup Software.' not in command_result.stdout_lines"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,21 @@
+---
+
+general_config:
+  url_repo: http://172.16.1.66/backend_repo
+    
+#  --------------- BACKEND_NODES_CONFIGURATION ----------------
+databases: 
+  node1:
+     hostname: orc1
+     oracle_unqname: orcl1
+     oracle_sid: orcl1
+     oracle_base: /u01/app/oracle
+     oracle_home: /u01/app/oracle/product/12.2.0.1/db_1
+     ssh_ip: 172.16.4.194
+     internal_ip: 172.16.4.194
+     port: 1521
+     service_name: orcl
+     passwd_usr_oracle: ora123
+     passwd_usr_grid: ora123
+    
+

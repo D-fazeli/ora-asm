@@ -1,0 +1,140 @@
+os_type:
+  minimal: true
+  desktop: false
+
+oracle_packages_list_minimal:
+  - sysstat
+  - unixODBC
+  - unzip
+  - binutils 
+  - compat-libcap1 
+  - compat-libstdc++-33 
+  - compat-libstdc++-33.i686 
+  - glibc 
+  - glibc.i686 
+  - glibc-devel 
+  - glibc-devel.i686 
+  - libaio 
+  - libaio.i686 
+  - libaio-devel 
+  - libaio-devel.i686 
+  - libX11 
+  - libX11.i686 
+  - libXau 
+  - libXau.i686 
+  - libXi 
+  - libXi.i686 
+  - libXtst 
+  - libXtst.i686 
+  - libgcc 
+  - libstdc++ 
+  - libstdc++-devel 
+  - libstdc++-devel.i686 
+  - libxcb 
+  - libxcb.i686 
+  - make 
+  - nfs-utils 
+  - smartmontools 
+  - sysstat
+  - ksh-20120801-137.0.1.el7.x86_64 
+  - unixODBC 
+  - unixODBC-devel 
+  - kernel-debug-3.10.0-229.14.1.el7.x86_64
+  - kmod-oracleasm-2.0.8-15.0.1.el7.x86_64
+  - oracleasmlib-2.0.12-1.el7.x86_64
+  - oracleasm-support-2.1.8-3.el7.x86_64
+  - rlwrap-0.42-1.el7.x86_64
+  - xorg-x11-fonts-Type1-7.5-9.el7.noarch
+  - xorg-x11-font-utils-7.5-20.el7.x86_64
+  - xorg-x11-utils-7.5-22.el7.x86_64
+  - xorg-x11-xauth-1.0.9-1.el7.x86_64
+  
+oracle_packages_list_desktop:
+  - oracle-database-server-12cR2-preinstall
+  - kernel-debug-3.10.0-229.14.1.el7.x86_64
+  - kmod-oracleasm-2.0.8-15.0.1.el7.x86_64
+  - oracleasmlib-2.0.12-1.el7.x86_64
+  - oracleasm-support-2.1.8-3.el7.x86_64
+  - rlwrap-0.42-1.el7.x86_64
+  - xorg-x11-fonts-Type1-7.5-9.el7.noarch
+  - xorg-x11-font-utils-7.5-20.el7.x86_64
+  - xorg-x11-utils-7.5-22.el7.x86_64
+  - xorg-x11-xauth-1.0.9-1.el7.x86_64
+  - ksh-20120801-137.0.1.el7.x86_64 
+  
+oracle_database_kernel_params:
+# Shared memory and semaphore
+# look for document 226209.1 in oracle support for details
+  kernel.sem: 250 32000 100 128
+  kernel.shmmni: 4096
+# 1.5 GB Shared memory 500mb for linux kernel (for 2GB virtual machine)
+  kernel.shmall: "{{shmall}}"
+# 1 GB Half of the physical memory (for 2GB virtual machine)
+  kernel.shmmax: "{{shmmax}}"
+# For 1Gbps with 1ms latency 16MB buffer
+  net.core.rmem_max: 16777216
+  net.core.wmem_max: 16777216
+  net.ipv4.tcp_rmem: 4096 87380 16777216
+  net.ipv4.tcp_wmem: 4096 65536 16777216
+# Minimize swap file use
+  vm.swappiness: 10
+  vm.dirty_background_ratio: 5
+  vm.dirty_ratio: 10
+# Max open file descriptors 512 * db processes + room for os
+  fs.file-max: 409600
+# Shorten keep alive of connections
+  net.ipv4.tcp_keepalive_time: 300
+  net.ipv4.tcp_keepalive_intvl: 60
+  net.ipv4.tcp_keepalive_probes: 10
+# maximize port range
+  net.ipv4.ip_local_port_range: 9000 65500
+
+# Oracle user limits
+oracle_limits_soft_no_file: 4096
+oracle_limits_hard_no_file: 65536
+oracle_limits_soft_nproc: 2047
+oracle_limits_hard_nproc: 16384
+oracle_limits_soft_stack: 10240
+oracle_limits_hard_stack: 32768
+oracle_limits_soft_core: unlimited
+oracle_limits_soft_core: unlimited
+# mem lock 90% of RAM
+oracle_limits_soft_memlock: 1887437
+oracle_limits_hard_memlock: 1887437
+# Grid limits
+grid_limits_soft_no_file: 65536
+grid_limits_hard_no_file: 65536
+grid_limits_soft_nproc: 16384
+grid_limits_hard_nproc: 16384
+grid_limits_soft_stack: 10240
+grid_limits_hard_stack: 10240
+
+
+# list disk for Createdisk asmoracle 
+list_partitions:  
+  desired_name:
+    DATA:
+      name1: DATA1
+   # if you have another disk, uncomment these
+   #  name2: DATA2
+   #  name3: DATA3
+    FRA:
+      name1: FRA1
+   # if you have another disk uncomment uncomment these
+   #  name2: FRA1
+   #  name3: FRA1
+  DISKS: 
+    DATA: 
+      DISK1: /dev/sdc1
+# if you have another disk, uncomment these      
+#     DISK2: /dev/sdc1
+#     DISK2: /dev/sde1
+    FRA:
+      DISK1: /dev/sdb1 
+# if you have another disk, uncomment these      
+#     DISK2: /dev/sdf1 
+#     DISK3: /dev/sdj1 
+
+
+
+
